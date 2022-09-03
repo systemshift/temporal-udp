@@ -55,3 +55,7 @@ Spame Node   v                    v      Spam Node
 
         Spame Node                   Spame Node
 ```
+
+## Kernel patch needed
+In order to reach production level performance, a patch in kernel space is needed to reach sub 10ms.
+For now, many hacks and workout arounds in userspace need to be done to achieve the proof of concept, such as keeping socket open but deleting buffer memory every few milliseconds  

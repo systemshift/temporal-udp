@@ -16,14 +16,13 @@ func main() {
 	}
 
 	fmt.Printf("udp server is %s\n", conn.RemoteAddr().String())
-	//defer conn.Close()
 
-	ticker := time.NewTicker(time.Millisecond * 200)
+	ticker := time.NewTicker(time.Millisecond * 342)
 	for range ticker.C {
 		message := time.Now().String()
 		_, err := conn.Write([]byte(message))
 		if err != nil {
-			log.Fatal(err)
+			log.Default().Println("error writing to udp server")
 		}
 		time.Sleep(time.Second)
 

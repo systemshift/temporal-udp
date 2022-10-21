@@ -23,7 +23,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("udp server is %s\n", conn.LocalAddr().String())
+		fmt.Println("udp server is", conn.LocalAddr().String())
 		buffer := make([]byte, 1024)
 
 		conn.SetDeadline(time.Now().Add(time.Millisecond * 300))
@@ -32,9 +32,8 @@ func main() {
 			log.Fatal(err)
 		}
 
-		fmt.Printf("message from client is %s\n", string(buffer[:message]))
+		fmt.Println("message from client is", string(buffer[:message]))
 		conn.Close()
-		//time.Sleep(time.Millisecond * 350)
 
 	}
 

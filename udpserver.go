@@ -10,7 +10,7 @@ import (
 
 func main() {
 
-	ticker := time.NewTicker(time.Millisecond * 1000)
+	ticker := time.NewTicker(time.Millisecond * 500)
 	source, err := net.ResolveUDPAddr("udp", "127.0.0.1:8080")
 	if err != nil {
 		log.Fatal(err)
@@ -26,7 +26,7 @@ func main() {
 		fmt.Println("udp server is", conn.LocalAddr().String())
 		buffer := make([]byte, 1024)
 
-		conn.SetDeadline(time.Now().Add(time.Millisecond * 300))
+		conn.SetDeadline(time.Now().Add(time.Millisecond * 50))
 		message, err := conn.Read(buffer)
 		if err != nil && !strings.Contains(err.Error(), "i/o timeout") {
 			log.Fatal(err)
@@ -34,6 +34,7 @@ func main() {
 
 		fmt.Println("message from client is", string(buffer[:message]))
 		conn.Close()
+		//time.Sleep(time.Millisecond * 400)
 
 	}
 

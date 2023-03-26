@@ -4,31 +4,36 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
+	"time"
 )
 
-var opentimewindow = 100
-var closetimewindow = 900
-var listenAddr string
-
 func Listen(listenAddr string) {
-	// listen for incoming udp packets
+	// listen for udp packets
+	ticker := time.NewTicker(time.Millisecond * 500)
 	source, err := net.ResolveUDPAddr("udp", listenAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
-	conn, err := net.ListenUDP("udp", source)
-	if err != nil {
-		log.Fatal(err)
+
+	for range ticker.C {
+
+		conn, err := net.ListenUDP("udp", source)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println("udp server is", conn.LocalAddr().String())
+		buffer := make([]byte, 1024)
+
+		conn.SetDeadline(time.Now().Add(time.Millisecond * 50))
+		message, err := conn.Read(buffer)
+		if err != nil && !strings.Contains(err.Error(), "i/o timeout") {
+			log.Fatal(err)
+		}
+
+		fmt.Println("message from client is", string(buffer[:message]))
+		conn.Close()
 	}
-	fmt.Println("udp server is", conn.LocalAddr().String())
-	buffer := make([]byte, 1024)
-
-	message, err := conn.Read(buffer)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("message from client is", string(buffer[:message]))
-	conn.Close()
-
 }

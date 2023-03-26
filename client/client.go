@@ -4,27 +4,34 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 )
 
-var opentimewindow = 100
-var closetimewindow = 900
-var sendAddr string
-var userInput string
+func Connect(address string, message []string) {
+	source, err := net.ResolveUDPAddr("udp", address)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-func Connect(sendAddr, userInput string) {
-	source, err := net.ResolveUDPAddr("udp", sendAddr)
 	conn, err := net.DialUDP("udp", nil, source)
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Printf("udp server is %s\n", conn.RemoteAddr().String())
 
-	message := userInput
-	_, err = conn.Write([]byte(message))
-	if err != nil {
-		log.Default().Println("error writing to udp server")
+	ticker := time.NewTicker(time.Millisecond * 10)
+	i := 0
+	for range ticker.C {
+		_, err := conn.Write([]byte(message[i]))
+		if err != nil {
+			log.Default().Println("error writing to udp server", err)
+		} else {
+			log.Default().Println("message sent to udp server", err)
+		}
+		fmt.Println(i)
+		i += 1
+		time.Sleep(time.Millisecond * 80)
+
 	}
-	conn.Close()
 }

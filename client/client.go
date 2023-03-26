@@ -9,8 +9,11 @@ import (
 
 func Connect(address string, message []string) {
 	source, err := net.ResolveUDPAddr("udp", address)
-	conn, err := net.DialUDP("udp", nil, source)
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	conn, err := net.DialUDP("udp", nil, source)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -22,11 +25,12 @@ func Connect(address string, message []string) {
 	for range ticker.C {
 		_, err := conn.Write([]byte(message[i]))
 		if err != nil {
-			log.Default().Println("error writing to udp server")
+			log.Default().Println("error writing to udp server", err)
 		} else {
-			log.Default().Println("message sent to udp server")
-			i += 1
+			log.Default().Println("message sent to udp server", err)
 		}
+		fmt.Println(i)
+		i += 1
 		time.Sleep(time.Millisecond * 80)
 
 	}

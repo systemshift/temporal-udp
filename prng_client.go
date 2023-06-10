@@ -1,62 +1,58 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"net"
 	"os"
+	"time"
 )
 
 const (
-	CONN_HOST       = "localhost"
-	HANDSHAKE_PORT  = "8080"
-	CONN_PORT       = "8081"
-	HANDSHAKE_ADDR  = CONN_HOST + ":" + HANDSHAKE_PORT
-	CONN_ADDR       = CONN_HOST + ":" + CONN_PORT
+	CONN_HOST       = "34.218.138.6"
+	HANDSHAKE_PORT  = 8080
+	FILE_PORT       = 8081
+	HANDSHAKE_ADDR  = CONN_HOST + ":8080"
+	FILE_ADDR       = CONN_HOST + ":8081"
 	MAX_PACKET_SIZE = 1400
-	HEADER_SIZE     = 8
 )
 
 func main() {
-	prng := rand.Int63()
+	seed := rand.Int63()
+	mod := int64(10000)
+	offset := rand.Int63n(mod)
+	start_time := time.Now()
 
-	serverAddr, err := net.ResolveUDPAddr("udp", HANDSHAKE_ADDR)
+	// send seed and start time
+	handshake_conn, err := net.Dial("udp", "34.218.138.6:8080")
 	if err != nil {
 		fmt.Println("Error: ", err)
 		os.Exit(1)
 	}
 
-	localAddr, err := net.ResolveUDPAddr("udp", "localhost:0")
-	if err != nil {
-		fmt.Println("Error: ", err)
-		os.Exit(1)
-	}
+	defer handshake_conn.Close()
 
-	conn, err := net.DialUDP("udp", localAddr, serverAddr)
-	if err != nil {
-		fmt.Println("Error: ", err)
-		os.Exit(1)
-	}
-	defer conn.Close()
+	buf := make([]byte, MAX_PACKET_SIZE)
+	for {
+		// send seed and start time
+		fmt.Println("sending seed and start time")
+		handshake_conn.Write([]byte(fmt.Sprintf("%d:%d", seed, start_time.UnixMilli()+offset)))
+		//handshake_conn.SetReadDeadline(start_time)
+		time.Sleep(10 * time.Millisecond)
+		fmt.Println("reading from connection into buffer")
+		_, err := handshake_conn.Read(buf)
+		if err != nil {
+			fmt.Println("Error: ", err)
+		}
 
-	// send prng to server
-	buffer := new(bytes.Buffer)
-	binary.Write(buffer, binary.LittleEndian, prng)
-	_, err = conn.Write(buffer.Bytes())
-	if err != nil {
-		fmt.Println("Error: ", err)
-		os.Exit(1)
+		fmt.Printf("received: %s\n", string(buf))
+		time.Sleep(10 * time.Second)
+		// check if ack has arrived
+		if string(buf) == "ack" && handshake_conn.RemoteAddr().String() == HANDSHAKE_ADDR {
+			fmt.Println("ack received")
+			break
+		}
 	}
+	// server now has seed and start time
 
-	// wait for ack from server
-	reply_buffer := make([]byte, MAX_PACKET_SIZE)
-	n, err := conn.Read(reply_buffer)
-	if err != nil {
-		fmt.Println("Error: ", err)
-		os.Exit(1)
-	}
-
-	fmt.Println(string(reply_buffer[:n]))
 }

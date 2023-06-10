@@ -46,12 +46,14 @@ func main() {
 		}
 
 		fmt.Printf("received: %s\n", string(buf))
-		time.Sleep(10 * time.Second)
+		time.Sleep(3 * time.Second)
 		// check if ack has arrived
-		if string(buf) == "ack" && handshake_conn.RemoteAddr().String() == HANDSHAKE_ADDR {
+
+		if string(buf[:3]) == "ack" {
 			fmt.Println("ack received")
 			break
 		}
+
 	}
 	// server now has seed and start time
 

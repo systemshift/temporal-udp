@@ -57,4 +57,28 @@ func main() {
 	}
 	// server now has seed and start time
 
+	// generate random sequence from shared seed
+	rand.Seed(seed)
+
+	// starting at the agreed start time, use the seeded RNG to generate the sequence of printing times. Server should produce same sequence
+	interval := rand.Int63n(mod) * time.Hour.Milliseconds()
+
+	ticker := time.NewTicker(time.Duration(interval))
+	for range ticker.C {
+		// wait until next_time: sleep for random number generated from seeded RNG
+		// show the current time
+		// update next_time using the seeded RNG to generate the next time
+		// repeat until the number of packets has been sent
+
+		// print current time
+		fmt.Println(time.Now())
+
+		// set new interval
+		interval = rand.Int63n(mod) * time.Hour.Milliseconds()
+		ticker.Reset(time.Duration(interval))
+
+	}
+	// wait until start time
+	//time.Sleep(time.Duration(start_time.UnixMilli()-time.Now().UnixMilli()) * time.Millisecond)
+
 }

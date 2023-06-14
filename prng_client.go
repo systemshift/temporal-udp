@@ -64,6 +64,24 @@ func main() {
 	interval := rand.Int63n(mod) * time.Hour.Milliseconds()
 
 	ticker := time.NewTicker(time.Duration(interval))
+
+	// listen back for incoming packets
+	file_conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("0.0.0.0"), Port: 8080})
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
+
+	buffer := make([]byte, MAX_PACKET_SIZE)
+
+	// create file to write to
+	file, err := os.Create("client_storage/01 - Angel Attack.mkv")
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
+	defer file.Close()
+
 	for range ticker.C {
 		// wait until next_time: sleep for random number generated from seeded RNG
 		// show the current time
@@ -77,8 +95,17 @@ func main() {
 		interval = rand.Int63n(mod) * time.Hour.Milliseconds()
 		ticker.Reset(time.Duration(interval))
 
+		// read from connection
+		fmt.Println("reading from connection into buffer")
+		n, _, err := file_conn.ReadFromUDP(buffer)
+		if err != nil {
+			fmt.Println("Error: ", err)
+			os.Exit(1)
+		}
+
+		// write to file
+		file.Write(buffer[:n])
+
 	}
-	// wait until start time
-	//time.Sleep(time.Duration(start_time.UnixMilli()-time.Now().UnixMilli()) * time.Millisecond)
 
 }

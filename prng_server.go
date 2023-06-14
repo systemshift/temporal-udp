@@ -25,6 +25,7 @@ const (
 func main() {
 	var seed int64
 	mod := int64(10000)
+	client_addr := &net.UDPAddr{}
 
 	handshake_conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("0.0.0.0"), Port: HANDSHAKE_PORT})
 	if err != nil {
@@ -86,6 +87,37 @@ func main() {
 
 	ticker := time.NewTicker(time.Duration(interval))
 
+	// setup file in memory and prepare to send, will use later to send packets over the time loop
+	file_info, err := os.Stat("server_storage/01 - Angel Attack.mkv")
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
+	file_array := make([]byte, file_info.Size())
+	// read file into memory
+	file, err := os.Open("server_storage/01 - Angel Attack.mkv")
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
+	n, err := file.Read(file_array)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
+	fmt.Println("Read ", n, " bytes from file")
+
+	// setup connection back to client
+	client_file_addr := &net.UDPAddr{IP: client_addr.IP, Port: 8080}
+	conn, err := net.DialUDP("udp", nil, client_file_addr)
+
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
+
+	i := 0
+
 	for range ticker.C {
 		// print current time
 		fmt.Println(time.Now())
@@ -93,6 +125,23 @@ func main() {
 		// update next_time using the seeded RNG to generate the next time
 		interval = rand.Int63n(mod) * time.Hour.Milliseconds()
 		ticker.Reset(time.Duration(interval))
+
+		// send packet to client
+		_, err = conn.Write(file_array[i : i+MAX_PACKET_SIZE])
+		if err != nil {
+			fmt.Println("Error: ", err)
+			os.Exit(1)
+		}
+
+		// todo: check for ack from client
+		// increment i
+		i += MAX_PACKET_SIZE
+		// check if EOF
+		if i >= len(file_array) {
+			fmt.Println("EOF")
+			break
+		}
+
 	}
 
 }

@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"net"
 	"os"
+	"syscall"
 	"time"
 )
 
@@ -51,6 +53,7 @@ func main() {
 
 		if string(buf[:3]) == "ack" {
 			fmt.Println("ack received")
+			handshake_conn.Close()
 			break
 		}
 
@@ -70,6 +73,12 @@ func main() {
 	if err != nil {
 		fmt.Println("Error: ", err)
 		os.Exit(1)
+	}
+	file_conn_file, err := file_conn.File()
+	// Set the receive buffer size
+	err = syscall.SetsockoptInt(int(file_conn_file.Fd()), syscall.SOL_SOCKET, syscall.SO_RCVBUF, MAX_PACKET_SIZE)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	buffer := make([]byte, MAX_PACKET_SIZE)
@@ -96,15 +105,22 @@ func main() {
 		ticker.Reset(time.Duration(interval))
 
 		// read from connection
-		fmt.Println("reading from connection into buffer")
+		fmt.Println("reading from connection into buffer to print file")
 		n, _, err := file_conn.ReadFromUDP(buffer)
 		if err != nil {
 			fmt.Println("Error: ", err)
 			os.Exit(1)
 		}
 
+		// print size of n
+		fmt.Printf("received: %d\n", n)
+
+		// writing buffer to file
+		fmt.Println("writing buffer to file")
+
 		// write to file
 		file.Write(buffer[:n])
+		file.Sync()
 
 	}
 

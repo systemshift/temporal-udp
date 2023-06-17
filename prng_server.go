@@ -40,18 +40,21 @@ func main() {
 	for {
 		// check for packet from client is the right size
 
-		n, client_addr, err := handshake_conn.ReadFromUDP(buf)
+		n, client, err := handshake_conn.ReadFromUDP(buf)
 		if err != nil {
 			fmt.Println("Error: ", err)
 			os.Exit(1)
 		}
+		// assign client address from client for global scope
+		client_addr = client
+		// print out client address
+		fmt.Println("Client address from handshake connection: ", client)
 		fmt.Printf("n = %d, buf[:n] = %s\n", n, string(buf[:n]))
 		data := string(buf[:n]) // trim packet to size
 		strs := strings.Split(data, ":")
 
 		// check for len(strs)==2
 		if len(strs) == 2 {
-			fmt.Println("Error: expected '%s' to have two numbers delimited by :", data)
 			seed_string := strs[0]
 			start_time := strs[1]
 
@@ -67,7 +70,7 @@ func main() {
 			fmt.Println("Start time: ", start_time)
 
 			// send ack
-			handshake_conn.WriteToUDP([]byte("ack"), client_addr)
+			handshake_conn.WriteToUDP([]byte("ack"), client)
 
 			time.Sleep(3 * time.Second)
 
@@ -75,9 +78,11 @@ func main() {
 			break
 		} else {
 			// print raw data
-			fmt.Println("Packet does not = 2. Received: ", data)
+			fmt.Println("Error: expected '%s' to have two numbers delimited by :", data)
+			fmt.Println("Packet is not = 2. Received: ", data)
 		}
 	}
+	//handshake_conn.Close()
 
 	// seed random number generator
 	rand.Seed(seed)
@@ -108,6 +113,7 @@ func main() {
 	fmt.Println("Read ", n, " bytes from file")
 
 	// setup connection back to client
+	fmt.Println("client_addr befrore file connection", client_addr)
 	client_file_addr := &net.UDPAddr{IP: client_addr.IP, Port: 8080}
 	conn, err := net.DialUDP("udp", nil, client_file_addr)
 
@@ -121,7 +127,9 @@ func main() {
 	for range ticker.C {
 		// print current time
 		fmt.Println(time.Now())
-
+		// print client address
+		fmt.Println("client_addr from file connection", client_addr)
+		fmt.Printf("%v\n", client_addr)
 		// update next_time using the seeded RNG to generate the next time
 		interval = rand.Int63n(mod) * time.Hour.Milliseconds()
 		ticker.Reset(time.Duration(interval))

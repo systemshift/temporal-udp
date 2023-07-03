@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -21,7 +23,7 @@ const (
 
 func main() {
 	seed := rand.Int63()
-	mod := int64(10000)
+	mod := int64(5)
 	offset := rand.Int63n(mod)
 	start_time := time.Now()
 
@@ -83,14 +85,32 @@ func main() {
 
 	buffer := make([]byte, MAX_PACKET_SIZE)
 
+	// receive metadata packet that includes file name and size
+	file_conn.ReadFromUDP(buffer)
+
+	// print metadata
+	fmt.Printf("received: %s\n", string(buffer))
+
+	// store file name and size split by :
+	full_string := strings.Split(string(buffer), ":")
+	file_name := strings.TrimRight(full_string[1], "\x00")
+
+	file_size, err := strconv.Atoi(full_string[0])
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("file name: ", file_name)
 	// create file to write to
-	file, err := os.Create("client_storage/01 - Angel Attack.mkv")
+	file, err := os.Create("client_storage/" + file_name)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		os.Exit(1)
 	}
 	defer file.Close()
 
+	file_counter := 0
 	for range ticker.C {
 		// wait until next_time: sleep for random number generated from seeded RNG
 		// show the current time
@@ -101,12 +121,13 @@ func main() {
 		fmt.Println(time.Now())
 
 		// set new interval
-		interval = rand.Int63n(mod) * time.Hour.Milliseconds()
+		minDuration := int64(1) // add 1 milisecond to min to avoid 0
+		interval = rand.Int63n(mod)*time.Hour.Milliseconds() + minDuration
 		ticker.Reset(time.Duration(interval))
 
 		// read from connection
 		fmt.Println("reading from connection into buffer to print file")
-		n, _, err := file_conn.ReadFromUDP(buffer)
+		n, addr, err := file_conn.ReadFromUDP(buffer)
 		if err != nil {
 			fmt.Println("Error: ", err)
 			os.Exit(1)
@@ -121,6 +142,21 @@ func main() {
 		// write to file
 		file.Write(buffer[:n])
 		file.Sync()
+
+		// reply with ack
+		_, err = file_conn.WriteToUDP([]byte("ack"), addr)
+		if err != nil {
+			fmt.Println("Error: ", err)
+			os.Exit(1)
+		}
+
+		// increment file counter
+		file_counter++ // change later to increment by n
+
+		// check if all packets have been received
+		if file_counter == file_size {
+			break
+		}
 
 	}
 

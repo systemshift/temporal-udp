@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"net"
@@ -24,7 +25,7 @@ const (
 
 func main() {
 	var seed int64
-	mod := int64(10000)
+	mod := int64(5)
 	client_addr := &net.UDPAddr{}
 
 	handshake_conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("0.0.0.0"), Port: HANDSHAKE_PORT})
@@ -113,7 +114,6 @@ func main() {
 	fmt.Println("Read ", n, " bytes from file")
 
 	// setup connection back to client
-	fmt.Println("client_addr befrore file connection", client_addr)
 	client_file_addr := &net.UDPAddr{IP: client_addr.IP, Port: 8080}
 	conn, err := net.DialUDP("udp", nil, client_file_addr)
 
@@ -122,7 +122,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	// send metadata file(size, name) to client
+	_, err = conn.Write([]byte(strconv.Itoa(int(file_info.Size())) + ":" + file_info.Name()))
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
+
 	i := 0
+	//client_counter := 0
 
 	for range ticker.C {
 		// print current time
@@ -131,19 +139,36 @@ func main() {
 		fmt.Println("client_addr from file connection", client_addr)
 		fmt.Printf("%v\n", client_addr)
 		// update next_time using the seeded RNG to generate the next time
-		interval = rand.Int63n(mod) * time.Hour.Milliseconds()
+		minDuration := int64(1) // add 1 milisecond to min to avoid 0
+		interval = rand.Int63n(mod)*time.Hour.Milliseconds() + minDuration
 		ticker.Reset(time.Duration(interval))
 
+		// end is used to make sure we don't go out of bounds reading the file
+		end := i + MAX_PACKET_SIZE
+		if end > len(file_array) {
+			end = len(file_array)
+		}
+
 		// send packet to client
-		_, err = conn.Write(file_array[i : i+MAX_PACKET_SIZE])
+		_, err = conn.Write(file_array[i:end])
 		if err != nil {
 			fmt.Println("Error: ", err)
 			os.Exit(1)
 		}
 
-		// todo: check for ack from client
-		// increment i
-		i += MAX_PACKET_SIZE
+		// check for ack from client
+		ack := make([]byte, MAX_PACKET_SIZE)
+		_, _, err := conn.ReadFromUDP(ack)
+		if err != nil {
+			fmt.Println("Error: ", err)
+			os.Exit(1)
+		}
+		if bytes.Equal(ack, []byte("ack")) {
+			fmt.Println("Ack received")
+			// increment i
+			i += MAX_PACKET_SIZE
+		}
+
 		// check if EOF
 		if i >= len(file_array) {
 			fmt.Println("EOF")

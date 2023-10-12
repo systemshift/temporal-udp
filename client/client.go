@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"strings"
 )
 
 const (
@@ -12,7 +13,7 @@ const (
 	MAX_PACKET_SIZE = 1400
 )
 
-func Handshake(ip string) {
+func Handshake(ip string) (string, int, int) {
 	// establish connection
 	handshake_conn, err := net.Dial("udp", ip+":8080")
 	if err != nil {
@@ -30,7 +31,7 @@ func Handshake(ip string) {
 	// send seed
 	handshake_conn.Write([]byte(seed_str))
 
-	// listen for income reply
+	// listen for incoming reply
 	buf := make([]byte, MAX_PACKET_SIZE)
 
 	// read from connection into buffer
@@ -41,4 +42,18 @@ func Handshake(ip string) {
 
 	// print received message
 	fmt.Printf("received: %s\n", string(buf))
+
+	// parse message into filename, size, and number of pieces
+	str_arr := strings.Split(string(buf), "\\")
+	filename := strings.Split(str_arr[0], ":")[1]
+	filesize := strings.Split(str_arr[1], ":")[1]
+	pieces := strings.Split(str_arr[2], ":")[1]
+
+	// convert filesize and pieces to int
+	filesize_int := 0
+	pieces_int := 0
+	fmt.Sscanf(filesize, "%d", &filesize_int)
+	fmt.Sscanf(pieces, "%d", &pieces_int)
+
+	return filename, filesize_int, pieces_int
 }

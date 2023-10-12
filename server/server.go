@@ -39,7 +39,11 @@ func HandshakeListen(ip string, file string) {
 
 	file_size := file_metadata.Size()
 	file_size_str := fmt.Sprintf("%d", file_size)
-	message := file + " " + file_size_str
+	// calculate the number of pieces to send
+	num_pieces := file_size / 1200 // 1200 for data, 200 for header
+
+	// message to send back to client with file name, size, and number of pieces
+	message := "filename:" + file + "\\ filesize:" + file_size_str + "\\ numpieces:" + fmt.Sprintf("%d", num_pieces)
 
 	// send file name and sizz back to client
 	_, err = handshake_conn.WriteTo([]byte(message), addr)
